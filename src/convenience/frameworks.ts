@@ -15,6 +15,15 @@ const unauthorized = () => new Response(WRONG_TOKEN_ERROR, { status: 401 });
 const badRequest = () => new Response(BAD_REQUEST_ERROR, { status: 400 });
 const empty = () => ({} as Update);
 
+// deno-lint-ignore no-explicit-any
+function safeJsonParse(value: string, fallback = {} as any): any {
+    try {
+        return JSON.parse(value);
+    } catch (_err) {
+        return fallback;
+    }
+}
+
 /**
  * Abstraction over a request-response cycle, providing access to the update, as
  * well as a mechanism for responding to the request and to end it.
@@ -243,8 +252,7 @@ export type WorktopAdapter = (req: {
 
 /** AWS lambda serverless functions */
 const awsLambda: LambdaAdapter = (event, _context, callback) => ({
-    // TODO: add safe parse workaround
-    update: JSON.parse(event.body ?? "{}"),
+    update: safeJsonParse(event.body ?? "{}"),
     header: event.headers[SECRET_HEADER],
     end: () => callback(null, { statusCode: 200 }),
     respond: (json) =>
@@ -263,8 +271,7 @@ const awsLambdaAsync: LambdaAsyncAdapter = (event, _context) => {
     let resolveResponse: (response: any) => void;
 
     return {
-        // TODO: add safe parse workaround
-        update: JSON.parse(event.body ?? "{}"),
+        update: safeJsonParse(event.body ?? "{}"),
         header: event.headers[SECRET_HEADER],
         end: () => resolveResponse({ statusCode: 200 }),
         respond: (json) =>
